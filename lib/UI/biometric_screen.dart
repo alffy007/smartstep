@@ -19,6 +19,7 @@ class BiometricScreen extends StatefulWidget {
 
 class _BiometricState extends State<BiometricScreen> {
   bool checkweight = false;
+  BleScanConnect bleScanConnect = BleScanConnect();
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -36,15 +37,15 @@ class _BiometricState extends State<BiometricScreen> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 15),
           child: CustomMaterialIndicator(
-              onRefresh: () =>
-              Future(() => BleScanConnect().scan()), // Your refresh logic
-          indicatorBuilder: (context, controller) {
-            return Icon(
-              Icons.ac_unit,
-              color: Theme.of(context).colorScheme.primary,
-              size: 30,
-            );
-          },
+            onRefresh: () =>
+                Future(() => BleScanConnect().scan()), // Your refresh logic
+            indicatorBuilder: (context, controller) {
+              return Icon(
+                Icons.ac_unit,
+                color: Theme.of(context).colorScheme.primary,
+                size: 30,
+              );
+            },
             child: ListView(
               children: [
                 Column(
@@ -86,7 +87,10 @@ class _BiometricState extends State<BiometricScreen> {
                         setState(() {
                           checkweight = !checkweight;
                         });
+
                         Future.delayed(const Duration(seconds: 5), () {
+                          bleScanConnect
+                              .measureweight(); // Await the measureweight() call
                           setState(() {
                             checkweight = !checkweight;
                           });
@@ -118,7 +122,8 @@ class _BiometricState extends State<BiometricScreen> {
                             );
                           },
                           shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(100)),
+                            borderRadius:
+                                BorderRadius.all(Radius.circular(100)),
                           ),
                           backgroundColor: Colors.grey,
                           child: const Icon(Icons.arrow_forward),

@@ -1,6 +1,7 @@
 import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:simple_gradient_text/simple_gradient_text.dart';
 import 'package:smartstep/models/ble_scan_connect.dart';
@@ -13,6 +14,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+   late List<BluetoothDevice> devices;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -27,8 +29,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         child: CustomMaterialIndicator(
-          onRefresh: () =>
-              Future(() => BleScanConnect().scan()), // Your refresh logic
+          onRefresh: () => Future(()async {
+            BleScanConnect bleScanConnect = BleScanConnect();
+          devices = await bleScanConnect.scan() as List<BluetoothDevice>;
+          }), // Your refresh logic
           indicatorBuilder: (context, controller) {
             return Icon(
               Icons.ac_unit,
@@ -98,7 +102,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       GestureDetector(
                         onTap: () {
-                          BleScanConnect().printOutput();
+                          BleScanConnect().printOutput(devices[0],devices[1]);
+                          print(devices[0].remoteId);
+                             print(devices[1].remoteId);
                         },
                         child: Container(
                           height: 70,
