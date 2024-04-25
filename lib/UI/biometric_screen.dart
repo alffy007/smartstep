@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import 'package:simple_gradient_text/simple_gradient_text.dart';
@@ -19,7 +20,9 @@ class BiometricScreen extends StatefulWidget {
 
 class _BiometricState extends State<BiometricScreen> {
   bool checkweight = false;
+  int weight = 0;
   BleScanConnect bleScanConnect = BleScanConnect();
+  late List<BluetoothDevice> devices;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -37,8 +40,9 @@ class _BiometricState extends State<BiometricScreen> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 15),
           child: CustomMaterialIndicator(
-            onRefresh: () =>
-                Future(() => BleScanConnect().scan()), // Your refresh logic
+            onRefresh: () => Future(() async {
+              devices = await bleScanConnect.scan() as List<BluetoothDevice>;
+            }), // Your refresh logic
             indicatorBuilder: (context, controller) {
               return Icon(
                 Icons.ac_unit,
@@ -83,15 +87,19 @@ class _BiometricState extends State<BiometricScreen> {
                       ),
                     ),
                     GestureDetector(
+                      onLongPress: () {
+                        bleScanConnect.disconnect(devices[0], devices[1]);
+                      },
                       onTap: () {
                         setState(() {
                           checkweight = !checkweight;
                         });
 
-                        Future.delayed(const Duration(seconds: 5), () {
-                          bleScanConnect
+                        Future.delayed(const Duration(seconds: 5), () async {
+                          int result = await bleScanConnect
                               .measureweight(); // Await the measureweight() call
                           setState(() {
+                            weight = result;
                             checkweight = !checkweight;
                           });
                         });
@@ -106,9 +114,11 @@ class _BiometricState extends State<BiometricScreen> {
                     Align(
                       alignment: Alignment.topCenter,
                       child: Text(
-                        '0',
+                        (weight / 1000).toString() == "25.0"
+                            ? "0"
+                            : (weight / 1000).toString(),
                         style: GoogleFonts.spaceMono(
-                            fontSize: 100.0, color: Colors.grey),
+                            fontSize: 40.0, color: Colors.grey),
                       ),
                     ),
                     Align(

@@ -8,7 +8,7 @@ import 'package:smartstep/UI/home_screen.dart';
 
 import 'UI/splash_screen.dart';
 
-void main() {
+ void main() {
   runApp(const MyApp());
 }
 
