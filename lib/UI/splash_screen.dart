@@ -1,11 +1,7 @@
-import 'dart:ffi';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartstep/UI/biometric_screen.dart';
-import 'package:smartstep/main.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -16,20 +12,10 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   leavePage(context)async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final bool? isLogged = prefs.getBool('isLogged');
-    if (isLogged == null || isLogged == false) {
-      Navigator.push(
+    Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const BiometricScreen()),
       );
-    } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const MyHomePage()),
-      );
-    }
-   
   }
 
   @override

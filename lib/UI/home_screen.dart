@@ -1,48 +1,89 @@
-import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
+import 'dart:async';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:simple_gradient_text/simple_gradient_text.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:smartstep/models/ble_scan_connect.dart';
 
+import '../models/ble_stream.dart';
+
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key});
+  const HomeScreen({super.key, superKey});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-   late List<BluetoothDevice> devices;
+  FirebaseApp secondaryApp = Firebase.app('SmartStep');
+  late DatabaseReference databaseReference;
+  int leftperc = 0;
+  int rightperc = 0;
+  static const String databaseUrl =
+      'https://smartstep-6a479-default-rtdb.firebaseio.com/';
+
+  @override
+  void initState() {
+    databaseReference = FirebaseDatabase.instanceFor(
+            app: secondaryApp, databaseURL: databaseUrl)
+        .ref('smartstep');
+    super.initState();
+  }
+
+  Future<double> getWeight() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble('weight') ?? 0;
+  }
+
+  Stream<double> getLeftWeightStream() {
+    return CombineLatestStream.list<double>([
+      BleStream.leftHeelController.stream.map(double.parse),
+      BleStream.leftToeController.stream.map(double.parse)
+    ]).map((values) => (values[0] + values[1]) / 1000);
+  }
+
+  Stream<double> getRightWeightStream() {
+    return CombineLatestStream.list<double>([
+      BleStream.rightHeelController.stream.map(double.parse),
+      BleStream.rightToeController.stream.map(double.parse)
+    ]).map((values) => (values[0] + values[1]) / 1000);
+  }
+
+  // @override
+  // void dispose() {
+  //   BleStream.leftHeelController.close();
+  //   BleStream.leftToeController.close();
+  //   BleStream.rightHeelController.close();
+  //   BleStream.rightToeController.close();
+  //   super.dispose();
+  // }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF312f30), Color(0xFF1e1c1d)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: CustomMaterialIndicator(
-          onRefresh: () => Future(()async {
-            BleScanConnect bleScanConnect = BleScanConnect();
-          devices = await bleScanConnect.scan() as List<BluetoothDevice>;
-          }), // Your refresh logic
-          indicatorBuilder: (context, controller) {
-            return Icon(
-              Icons.ac_unit,
-              color: Theme.of(context).colorScheme.primary,
-              size: 30,
-            );
-          },
-          child: ListView(
-            children: [
-              Stack(
+    return FutureBuilder<double>(
+        future: getWeight(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const CircularProgressIndicator();
+          }
+
+          double weight = snapshot.data!;
+          return Scaffold(
+            body: Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF312f30), Color(0xFF1e1c1d)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+              child: Stack(
                 children: [
                   Positioned(
                     left: 100,
@@ -101,10 +142,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () {
-                          BleScanConnect().printOutput(devices[0],devices[1]);
-                          print(devices[0].remoteId);
-                             print(devices[1].remoteId);
+                        onLongPress: () {
+                          BleScanConnect().disconnect(BleScanConnect().device1,
+                              BleScanConnect().device2);
                         },
                         child: Container(
                           height: 70,
@@ -132,10 +172,20 @@ class _HomeScreenState extends State<HomeScreen> {
                                     const SizedBox(
                                       width: 40,
                                     ),
-                                    Text(
-                                      '${BleScanConnect().leftperc}%',
-                                      style:
-                                          GoogleFonts.spaceMono(fontSize: 18),
+                                    StreamBuilder(
+                                      stream: getLeftWeightStream(),
+                                      builder: (context, snapshot) {
+                                        if (snapshot.connectionState ==
+                                            ConnectionState.waiting) {
+                                          return const CircularProgressIndicator();
+                                        }
+
+                                        double leftWeight = snapshot.data!;
+                                        leftperc = ((leftWeight / weight) * 100)
+                                            .toInt();
+                                        print(leftWeight);
+                                        return Text('$leftperc%');
+                                      },
                                     ),
                                   ],
                                 ),
@@ -145,10 +195,21 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 Row(
                                   children: [
-                                    Text(
-                                      '${BleScanConnect().rightperc}%',
-                                      style:
-                                          GoogleFonts.spaceMono(fontSize: 18),
+                                    StreamBuilder(
+                                      stream: getRightWeightStream(),
+                                      builder: (context, snapshot) {
+                                        if (snapshot.connectionState ==
+                                            ConnectionState.waiting) {
+                                          return const CircularProgressIndicator();
+                                        }
+
+                                        double rightWeight = snapshot.data!;
+                                        rightperc =
+                                            ((rightWeight / weight) * 100)
+                                                .toInt();
+                                        print(rightWeight);
+                                        return Text('$rightperc%');
+                                      },
                                     ),
                                     const SizedBox(
                                       width: 40,
@@ -173,10 +234,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
-      ),
-    );
+            ),
+          );
+        });
   }
 }

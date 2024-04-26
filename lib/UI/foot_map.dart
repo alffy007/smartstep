@@ -1,7 +1,9 @@
 import 'package:avatar_glow/avatar_glow.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../models/ble_stream.dart';
 
 class FootScreen extends StatefulWidget {
   const FootScreen({super.key});
@@ -25,9 +27,30 @@ class _FootScreenState extends State<FootScreen> {
     "Your foot pressure is well-distributed, but be mindful of maintaining this balance especially during movement.",
   ];
 
+  Future<double> getWeight() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble('weight') ?? 0;
+  }
+
+  Stream<double> getLefHeeltWeightStream() {
+    return BleStream.leftHeelController.stream.map(double.parse);
+  }
+
+  Stream<double> getLefToetWeightStream() {
+    return BleStream.leftToeController.stream.map(double.parse);
+  }
+
+  Stream<double> getRightHeeltWeightStream() {
+    return BleStream.rightHeelController.stream.map(double.parse);
+  }
+
+  Stream<double> getRightToetWeightStream() {
+    return BleStream.rightToeController.stream.map(double.parse);
+  }
+
   @override
   Widget build(BuildContext context) {
-    bool _animate = true;
+    bool animate = true;
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -65,84 +88,60 @@ class _FootScreenState extends State<FootScreen> {
                 Row(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.only(left: 125, top: 45),
-                      child: AvatarGlow(
-                        startDelay: const Duration(milliseconds: 0),
-                        glowColor: Colors.white,
-                        glowShape: BoxShape.circle,
-                        animate: _animate,
-                        glowCount: 1,
-                        curve: Curves.easeOutQuad,
-                        child: const Material(
-                          elevation: 8.0,
-                          shape: CircleBorder(),
-                          color: Colors.transparent,
-                          child: CircleAvatar(
-                            radius: 12.0,
-                          ),
-                        ),
-                      ),
+                      padding: const EdgeInsets.only(left: 120, top: 130),
+                      child: StreamBuilder<double>(
+                          stream: getLefToetWeightStream(),
+                          builder: (context, snapshot) {
+                            // print("left toe ${snapshot.data}");
+                            return AvatarGlow(
+                              startDelay: const Duration(milliseconds: 0),
+                              glowColor: Colors.white,
+                              glowShape: BoxShape.circle,
+                              animate: animate,
+                              glowCount: ((snapshot.data ?? 0) > 1000 ||
+                                      (snapshot.data ?? 0) < 5000)
+                                  ? 2
+                                  : ((snapshot.data ?? 0) > 5000 ||
+                                          (snapshot.data ?? 0) < 10000)
+                                      ? 3
+                                      : ((snapshot.data ?? 0) > 10000)
+                                          ? 5
+                                          : 0,
+                              curve: Curves.easeOutQuad,
+                              child: const Material(
+                                elevation: 8.0,
+                                shape: CircleBorder(),
+                                color: Colors.transparent,
+                                child: CircleAvatar(
+                                  radius: 15.0,
+                                ),
+                              ),
+                            );
+                          }),
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(left: 73, top: 45),
-                      child: AvatarGlow(
-                        startDelay: const Duration(milliseconds: 0),
-                        glowColor: Colors.white,
-                        glowShape: BoxShape.circle,
-                        animate: _animate,
-                        glowCount: 1,
-                        curve: Curves.easeOutQuad,
-                        child: const Material(
-                          elevation: 8.0,
-                          shape: CircleBorder(),
-                          color: Colors.transparent,
-                          child: CircleAvatar(
-                            radius: 12.0,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 135, top: 60),
-                      child: AvatarGlow(
-                        startDelay: const Duration(milliseconds: 0),
-                        glowColor: Colors.white,
-                        glowShape: BoxShape.circle,
-                        animate: _animate,
-                        glowCount: 1,
-                        curve: Curves.easeOutQuad,
-                        child: const Material(
-                          elevation: 8.0,
-                          shape: CircleBorder(),
-                          color: Colors.transparent,
-                          child: CircleAvatar(
-                            radius: 12.0,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 55, top: 60),
-                      child: AvatarGlow(
-                        startDelay: const Duration(milliseconds: 0),
-                        glowColor: Colors.white,
-                        glowShape: BoxShape.circle,
-                        animate: _animate,
-                        glowCount: 1,
-                        curve: Curves.easeOutQuad,
-                        child: const Material(
-                          elevation: 8.0,
-                          shape: CircleBorder(),
-                          color: Colors.transparent,
-                          child: CircleAvatar(
-                            radius: 12.0,
-                          ),
-                        ),
-                      ),
+                      padding: const EdgeInsets.only(left: 70, top: 130),
+                      child: StreamBuilder<double>(
+                          stream: getRightToetWeightStream(),
+                          builder: (context, snapshot) {
+                            print("right toe ${snapshot.data}");
+                            return AvatarGlow(
+                              startDelay: const Duration(milliseconds: 0),
+                              glowColor: Colors.white,
+                              glowShape: BoxShape.circle,
+                              animate: animate,
+                              glowCount: 1,
+                              curve: Curves.easeOutQuad,
+                              child: const Material(
+                                elevation: 8.0,
+                                shape: CircleBorder(),
+                                color: Colors.transparent,
+                                child: CircleAvatar(
+                                  radius: 15.0,
+                                ),
+                              ),
+                            );
+                          }),
                     ),
                   ],
                 ),
@@ -152,41 +151,65 @@ class _FootScreenState extends State<FootScreen> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.only(left: 110),
-                        child: AvatarGlow(
-                          startDelay: const Duration(milliseconds: 0),
-                          glowColor: Colors.white,
-                          glowShape: BoxShape.circle,
-                          animate: _animate,
-                          glowCount: 1,
-                          curve: Curves.easeOutQuad,
-                          child: const Material(
-                            elevation: 8.0,
-                            shape: CircleBorder(),
-                            color: Colors.transparent,
-                            child: CircleAvatar(
-                              radius: 18.0,
-                            ),
-                          ),
-                        ),
+                        child: StreamBuilder<double>(
+                            stream: getLefHeeltWeightStream(),
+                            builder: (context, snapshot) {
+                              return AvatarGlow(
+                                startDelay: const Duration(milliseconds: 0),
+                                glowColor: Colors.white,
+                                glowShape: BoxShape.circle,
+                                animate: animate,
+                                glowCount: ((snapshot.data ?? 0) > 1000 ||
+                                        (snapshot.data ?? 0) < 5000)
+                                    ? 2
+                                    : ((snapshot.data ?? 0) > 5000 ||
+                                            (snapshot.data ?? 0) < 10000)
+                                        ? 3
+                                        : ((snapshot.data ?? 0) > 10000)
+                                            ? 5
+                                            : 0,
+                                curve: Curves.easeOutQuad,
+                                child: const Material(
+                                  elevation: 8.0,
+                                  shape: CircleBorder(),
+                                  color: Colors.transparent,
+                                  child: CircleAvatar(
+                                    radius: 18.0,
+                                  ),
+                                ),
+                              );
+                            }),
                       ),
                       Padding(
                         padding: const EdgeInsets.only(left: 80),
-                        child: AvatarGlow(
-                          startDelay: const Duration(milliseconds: 0),
-                          glowColor: Colors.white,
-                          glowShape: BoxShape.circle,
-                          animate: _animate,
-                          glowCount: 1,
-                          curve: Curves.easeOutQuad,
-                          child: const Material(
-                            elevation: 8.0,
-                            shape: CircleBorder(),
-                            color: Colors.transparent,
-                            child: CircleAvatar(
-                              radius: 18.0,
-                            ),
-                          ),
-                        ),
+                        child: StreamBuilder<double>(
+                            stream: getRightHeeltWeightStream(),
+                            builder: (context, snapshot) {
+                              return AvatarGlow(
+                                startDelay: const Duration(milliseconds: 0),
+                                glowColor: Colors.white,
+                                glowShape: BoxShape.circle,
+                                animate: animate,
+                                glowCount: ((snapshot.data ?? 0) > 1000 ||
+                                        (snapshot.data ?? 0) < 5000)
+                                    ? 2
+                                    : ((snapshot.data ?? 0) > 5000 ||
+                                            (snapshot.data ?? 0) < 10000)
+                                        ? 3
+                                        : ((snapshot.data ?? 0) > 10000)
+                                            ? 5
+                                            : 0,
+                                curve: Curves.easeOutQuad,
+                                child: const Material(
+                                  elevation: 8.0,
+                                  shape: CircleBorder(),
+                                  color: Colors.transparent,
+                                  child: CircleAvatar(
+                                    radius: 18.0,
+                                  ),
+                                ),
+                              );
+                            }),
                       ),
                     ],
                   ),

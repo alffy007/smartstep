@@ -3,19 +3,18 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:excel/excel.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path/path.dart';
 
+import 'ble_stream.dart';
+
 class BleScanConnect {
   late BluetoothDevice device1;
   late BluetoothDevice device2;
   BluetoothAdapterState? states;
-  int leftperc = 60;
-  int rightperc = 40;
   List<String> lefttoeoutputs = [];
   List<String> leftheeloutputs = [];
   List<String> righttoeoutputs = [];
@@ -24,8 +23,11 @@ class BleScanConnect {
   final String characteristicUuidRh = "b478a77f-7777-459f-b999-a6d3eaaddbe1";
   final String characteristicUuidLt = "c3b19f80-4e80-48e0-b3b5-0fcaa545e3db";
   final String characteristicUuidLh = "a6d06e3e-8aa8-444a-9df8-7a74dba288d1";
+  StreamSubscription? leftToeSubscription;
+  StreamSubscription? leftHeelSubscription;
+  StreamSubscription? rightToeSubscription;
+  StreamSubscription? rightHeelSubscription;
   final int maxSize = 50;
-
   Future scan() async {
     lefttoeoutputs = [];
     leftheeloutputs = [];
@@ -54,7 +56,7 @@ class BleScanConnect {
     }
 
     if (states == BluetoothAdapterState.on) {
-      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
+      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
 
       FlutterBluePlus.onScanResults.listen(
         (results) async {
@@ -128,6 +130,11 @@ class BleScanConnect {
   void printOutput(BluetoothDevice device1, BluetoothDevice device2) async {
     await device1.disconnect();
     await device2.disconnect();
+    // Close the StreamControllers
+    BleStream.leftToeController.close();
+    BleStream.leftHeelController.close();
+    BleStream.rightToeController.close();
+    BleStream.rightHeelController.close();
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final List<dynamic>? leftitem1 = prefs.getStringList('lefttoe');
     final List<dynamic>? leftitem2 = prefs.getStringList('leftheel');
@@ -209,7 +216,7 @@ class BleScanConnect {
     print(lefttoeavg + leftheelavg + righttoeavg + rightheelavg);
     int weight =
         (lefttoeavg + leftheelavg + righttoeavg + rightheelavg).round();
-    return weight+25000;
+    return weight;
   }
 
   double calculateAverage(List<String> numbers) {
@@ -227,13 +234,20 @@ class BleScanConnect {
     return average;
   }
 
-  void disconnect(BluetoothDevice device1,BluetoothDevice device2) async {
+  void disconnect(BluetoothDevice device1, BluetoothDevice device2) async {
     await device1.disconnect();
     await device2.disconnect();
+    // Close the StreamControllers
+    BleStream.leftToeController.close();
+    BleStream.leftHeelController.close();
+    BleStream.rightToeController.close();
+    BleStream.rightHeelController.close();
   }
 
   void getStreamData() async {
     // Check if device1 is connected before discovering services
+    // Stream controllers for each service
+
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     if (device1.isConnected) {
       Fluttertoast.showToast(
@@ -246,11 +260,12 @@ class BleScanConnect {
           fontSize: 16.0);
       List<BluetoothService> services1 = await device1.discoverServices();
       print('start reading');
-      services1.forEach((service) {
+      for (var service in services1) {
         for (var characteristic in service.characteristics) {
           if (characteristic.uuid.toString() == characteristicUuidLt) {
             characteristic.setNotifyValue(!characteristic.isNotifying);
-            characteristic.onValueReceived.listen((value) {
+            leftToeSubscription =
+                characteristic.onValueReceived.listen((value) {
               // Check the size of the list before adding new items
               if (lefttoeoutputs.length >= maxSize) {
                 // If the list is too large, remove the first item
@@ -259,13 +274,15 @@ class BleScanConnect {
 
               lefttoeoutputs.add(ascii.decode(value));
               prefs.setStringList('lefttoelist', leftheeloutputs);
-
-              print(lefttoeoutputs );
+              BleStream.leftToeController
+                  .add(ascii.decode(value)); // Add value to stream
+              // print(lefttoeoutputs);
             });
           }
           if (characteristic.uuid.toString() == characteristicUuidLh) {
             characteristic.setNotifyValue(!characteristic.isNotifying);
-            characteristic.onValueReceived.listen((value) {
+            leftHeelSubscription =
+                characteristic.onValueReceived.listen((value) {
               // Check the size of the list before adding new items
               if (leftheeloutputs.length >= maxSize) {
                 // If the list is too large, remove the first item
@@ -276,11 +293,13 @@ class BleScanConnect {
 
               leftheeloutputs.add(ascii.decode(value));
               prefs.setStringList('leftheellist', leftheeloutputs);
-              print(leftheeloutputs);
+              BleStream.leftHeelController
+                  .add(ascii.decode(value)); // Add value to stream
+              // print(leftheeloutputs);
             });
           }
         }
-      });
+      }
     } else {
       print('Error: device1 is not connected');
     }
@@ -297,11 +316,12 @@ class BleScanConnect {
 
       List<BluetoothService> services2 = await device2.discoverServices();
 
-      services2.forEach((service) {
+      for (var service in services2) {
         for (var characteristic in service.characteristics) {
           if (characteristic.uuid.toString() == characteristicUuidRt) {
             characteristic.setNotifyValue(!characteristic.isNotifying);
-            characteristic.onValueReceived.listen((value) {
+            rightToeSubscription =
+                characteristic.onValueReceived.listen((value) {
               if (righttoeoutputs.length >= maxSize) {
                 // If the list is too large, remove the first item
                 righttoeoutputs.removeAt(0);
@@ -309,12 +329,15 @@ class BleScanConnect {
 
               righttoeoutputs.add(ascii.decode(value));
               prefs.setStringList('righttoelist', righttoeoutputs);
-              print(righttoeoutputs);
+              BleStream.rightToeController
+                  .add(ascii.decode(value)); // Add value to stream
+              // print(righttoeoutputs);
             });
           }
           if (characteristic.uuid.toString() == characteristicUuidRh) {
             characteristic.setNotifyValue(!characteristic.isNotifying);
-            characteristic.onValueReceived.listen((value) {
+            rightHeelSubscription =
+                characteristic.onValueReceived.listen((value) {
               if (rightheeloutputs.length >= maxSize) {
                 // If the list is too large, remove the first item
                 rightheeloutputs.removeAt(0);
@@ -322,14 +345,22 @@ class BleScanConnect {
 
               rightheeloutputs.add(ascii.decode(value));
               prefs.setStringList('rightheellist', rightheeloutputs);
-
-              print(rightheeloutputs);
+              BleStream.rightHeelController
+                  .add(ascii.decode(value)); // Add value to stream
+              // print(rightheeloutputs);
             });
           }
         }
-      });
+      }
     } else {
       print('Error: device2 is not connected');
     }
+  }
+
+  void stopNotifications() async {
+    leftToeSubscription?.cancel();
+    leftHeelSubscription?.cancel();
+    rightToeSubscription?.cancel();
+    rightHeelSubscription?.cancel();
   }
 }

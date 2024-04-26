@@ -1,12 +1,10 @@
 import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
-import 'package:simple_gradient_text/simple_gradient_text.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartstep/main.dart';
 
 import '../models/ble_scan_connect.dart';
@@ -89,15 +87,19 @@ class _BiometricState extends State<BiometricScreen> {
                     GestureDetector(
                       onLongPress: () {
                         bleScanConnect.disconnect(devices[0], devices[1]);
+                        Fluttertoast.showToast(msg: 'Disconnected');
                       },
-                      onTap: () {
+                      onTap: () async {
                         setState(() {
                           checkweight = !checkweight;
                         });
-
+                        final SharedPreferences prefs =
+                            await SharedPreferences.getInstance();
                         Future.delayed(const Duration(seconds: 5), () async {
                           int result = await bleScanConnect
                               .measureweight(); // Await the measureweight() call
+
+                          prefs.setDouble('weight', result / 1000);
                           setState(() {
                             weight = result;
                             checkweight = !checkweight;
@@ -114,9 +116,7 @@ class _BiometricState extends State<BiometricScreen> {
                     Align(
                       alignment: Alignment.topCenter,
                       child: Text(
-                        (weight / 1000).toString() == "25.0"
-                            ? "0"
-                            : (weight / 1000).toString(),
+                        (weight / 1000).toString(),
                         style: GoogleFonts.spaceMono(
                             fontSize: 40.0, color: Colors.grey),
                       ),
@@ -125,6 +125,8 @@ class _BiometricState extends State<BiometricScreen> {
                         alignment: Alignment.bottomRight,
                         child: FloatingActionButton(
                           onPressed: () {
+                            // bleScanConnect.stopNotifications();
+
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(

@@ -22,7 +22,10 @@ dependencies:
   excel: ^4.0.3
   path_provider: ^2.1.2
   lottie: ^3.1.0
-
+  firebase_core: ^2.30.1
+  path: any
+  firebase_database: ^10.5.4
+  rxdart: ^0.27.7
 dev_dependencies:
   flutter_test:
     sdk: flutter
