@@ -25,12 +25,47 @@ class _HomeScreenState extends State<HomeScreen> {
   int rightperc = 0;
   static const String databaseUrl =
       'https://smartstep-6a479-default-rtdb.firebaseio.com/';
-
+  StreamSubscription<double>? leftHeelSubscription;
+  StreamSubscription<double>? leftToeSubscription;
+  StreamSubscription<double>? rightHeelSubscription;
+  StreamSubscription<double>? rightToeSubscription;
+  String posture = '15';
   @override
   void initState() {
     databaseReference = FirebaseDatabase.instanceFor(
             app: secondaryApp, databaseURL: databaseUrl)
+        .ref('feedback');
+    databaseReference.child('posture_score').onValue.listen((event) {
+      final data = event.snapshot.value;
+      print(data);
+      if (data != null) {
+        setState(() {
+          posture = data.toString();
+        });
+      }
+    });
+    databaseReference = FirebaseDatabase.instanceFor(
+            app: secondaryApp, databaseURL: databaseUrl)
         .ref('smartstep');
+    leftToeSubscription =
+        BleStream.leftToeController.stream.map(double.parse).listen((value) {
+      databaseReference.child('aleftToe').set(value);
+    });
+    leftHeelSubscription =
+        BleStream.leftHeelController.stream.map(double.parse).listen((value) {
+      databaseReference.child('bleftHeel').set(value);
+    });
+
+    rightToeSubscription =
+        BleStream.rightToeController.stream.map(double.parse).listen((value) {
+      databaseReference.child('crightToe').set(value);
+    });
+
+    rightHeelSubscription =
+        BleStream.rightHeelController.stream.map(double.parse).listen((value) {
+      databaseReference.child('drightHeel').set(value);
+    });
+
     super.initState();
   }
 
@@ -40,6 +75,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Stream<double> getLeftWeightStream() {
+    databaseReference
+        .child('leftHeel')
+        .set(BleStream.leftHeelController.stream.map(double.parse));
+    databaseReference
+        .child('leftToe')
+        .set(BleStream.leftHeelController.stream.map(double.parse));
     return CombineLatestStream.list<double>([
       BleStream.leftHeelController.stream.map(double.parse),
       BleStream.leftToeController.stream.map(double.parse)
@@ -47,6 +88,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Stream<double> getRightWeightStream() {
+    databaseReference
+        .child('rightHeel')
+        .set(BleStream.rightHeelController.stream.map(double.parse));
+    databaseReference
+        .child('rightToe')
+        .set(BleStream.rightToeController.stream.map(double.parse));
     return CombineLatestStream.list<double>([
       BleStream.rightHeelController.stream.map(double.parse),
       BleStream.rightToeController.stream.map(double.parse)
@@ -121,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Padding(
                         padding: const EdgeInsets.only(left: 40),
                         child: GradientText(
-                          '60',
+                          posture,
                           style: GoogleFonts.spaceMono(
                             fontSize: 200.0,
                           ),

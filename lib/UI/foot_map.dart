@@ -1,4 +1,6 @@
 import 'package:avatar_glow/avatar_glow.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,6 +16,8 @@ class FootScreen extends StatefulWidget {
 
 class _FootScreenState extends State<FootScreen> {
   final ScrollController _firstController = ScrollController();
+  FirebaseApp secondaryApp = Firebase.app('SmartStep');
+  late DatabaseReference databaseReference;
   List<String> footFeedback = [
     "Your weight distribution is uneven, try to put more pressure on the balls of your feet.",
     "You're putting excessive pressure on your heels, try to distribute your weight evenly across your foot.",
@@ -27,6 +31,8 @@ class _FootScreenState extends State<FootScreen> {
     "Your foot pressure is well-distributed, but be mindful of maintaining this balance especially during movement.",
   ];
 
+  static const String databaseUrl =
+      'https://smartstep-6a479-default-rtdb.firebaseio.com/';
   Future<double> getWeight() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getDouble('weight') ?? 0;
@@ -46,6 +52,25 @@ class _FootScreenState extends State<FootScreen> {
 
   Stream<double> getRightToetWeightStream() {
     return BleStream.rightToeController.stream.map(double.parse);
+  }
+
+  String feedback = 'Your feedback is generating!';
+
+  @override
+  void initState() {
+    databaseReference = FirebaseDatabase.instanceFor(
+            app: secondaryApp, databaseURL: databaseUrl)
+        .ref('feedback');
+    databaseReference.child('data').onValue.listen((event) {
+      final data = event.snapshot.value;
+      print(data);
+      if (data != null) {
+        setState(() {
+          feedback = data.toString();
+        });
+      }
+    });
+    super.initState();
   }
 
   @override
@@ -98,15 +123,17 @@ class _FootScreenState extends State<FootScreen> {
                               glowColor: Colors.white,
                               glowShape: BoxShape.circle,
                               animate: animate,
-                              glowCount: ((snapshot.data ?? 0) > 1000 ||
-                                      (snapshot.data ?? 0) < 5000)
-                                  ? 2
-                                  : ((snapshot.data ?? 0) > 5000 ||
-                                          (snapshot.data ?? 0) < 10000)
-                                      ? 3
-                                      : ((snapshot.data ?? 0) > 10000)
-                                          ? 5
-                                          : 0,
+                              glowCount: snapshot.hasData
+                                  ? (snapshot.data! > 1000 &&
+                                          snapshot.data! < 5000)
+                                      ? 2
+                                      : (snapshot.data! > 5000 &&
+                                              snapshot.data! < 15000)
+                                          ? 3
+                                          : (snapshot.data! > 15000)
+                                              ? 5
+                                              : 0
+                                  : 0,
                               curve: Curves.easeOutQuad,
                               child: const Material(
                                 elevation: 8.0,
@@ -130,7 +157,17 @@ class _FootScreenState extends State<FootScreen> {
                               glowColor: Colors.white,
                               glowShape: BoxShape.circle,
                               animate: animate,
-                              glowCount: 1,
+                              glowCount: snapshot.hasData
+                                  ? (snapshot.data! > 1000 &&
+                                          snapshot.data! < 5000)
+                                      ? 2
+                                      : (snapshot.data! > 5000 &&
+                                              snapshot.data! < 15000)
+                                          ? 3
+                                          : (snapshot.data! > 15000)
+                                              ? 5
+                                              : 0
+                                  : 0,
                               curve: Curves.easeOutQuad,
                               child: const Material(
                                 elevation: 8.0,
@@ -159,15 +196,17 @@ class _FootScreenState extends State<FootScreen> {
                                 glowColor: Colors.white,
                                 glowShape: BoxShape.circle,
                                 animate: animate,
-                                glowCount: ((snapshot.data ?? 0) > 1000 ||
-                                        (snapshot.data ?? 0) < 5000)
-                                    ? 2
-                                    : ((snapshot.data ?? 0) > 5000 ||
-                                            (snapshot.data ?? 0) < 10000)
-                                        ? 3
-                                        : ((snapshot.data ?? 0) > 10000)
-                                            ? 5
-                                            : 0,
+                                glowCount: snapshot.hasData
+                                    ? (snapshot.data! > 1000 &&
+                                            snapshot.data! < 5000)
+                                        ? 2
+                                        : (snapshot.data! > 5000 &&
+                                                snapshot.data! < 15000)
+                                            ? 3
+                                            : (snapshot.data! > 15000)
+                                                ? 5
+                                                : 0
+                                    : 0,
                                 curve: Curves.easeOutQuad,
                                 child: const Material(
                                   elevation: 8.0,
@@ -190,15 +229,17 @@ class _FootScreenState extends State<FootScreen> {
                                 glowColor: Colors.white,
                                 glowShape: BoxShape.circle,
                                 animate: animate,
-                                glowCount: ((snapshot.data ?? 0) > 1000 ||
-                                        (snapshot.data ?? 0) < 5000)
-                                    ? 2
-                                    : ((snapshot.data ?? 0) > 5000 ||
-                                            (snapshot.data ?? 0) < 10000)
-                                        ? 3
-                                        : ((snapshot.data ?? 0) > 10000)
-                                            ? 5
-                                            : 0,
+                                glowCount: snapshot.hasData
+                                    ? (snapshot.data! > 1000 &&
+                                            snapshot.data! < 5000)
+                                        ? 2
+                                        : (snapshot.data! > 5000 &&
+                                                snapshot.data! < 15000)
+                                            ? 3
+                                            : (snapshot.data! > 15000)
+                                                ? 5
+                                                : 0
+                                    : 0,
                                 curve: Curves.easeOutQuad,
                                 child: const Material(
                                   elevation: 8.0,
@@ -226,40 +267,11 @@ class _FootScreenState extends State<FootScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.only(top: 15, left: 30, right: 30),
-                  child: Container(
-                    height:
-                        200, // Allow the container to take up all available vertical space
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Colors.grey,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Scrollbar(
-                      controller: _firstController,
-                      child: ListView.builder(
-                        controller: _firstController,
-                        padding: EdgeInsets.zero, // Remove any default padding
-                        itemCount: footFeedback.length,
-                        itemBuilder: (context, index) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 12),
-                            child: Column(
-                              children: [
-                                Text(
-                                  '${index + 1}. ${footFeedback[index]}',
-                                  style: GoogleFonts.spaceMono(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
+                  child: Text(
+                    feedback,
+                    style: GoogleFonts.spaceMono(
+                      color: Colors.white,
+                      fontSize: 12,
                     ),
                   ),
                 ),
