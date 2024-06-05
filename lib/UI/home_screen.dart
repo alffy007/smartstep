@@ -170,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: GradientText(
                           posture,
                           style: GoogleFonts.spaceMono(
-                            fontSize: 199.0,
+                            fontSize: 200.0,
                           ),
                           colors: const [
                             Colors.grey,
